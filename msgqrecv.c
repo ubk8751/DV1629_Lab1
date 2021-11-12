@@ -9,7 +9,7 @@
 #define PERMS 0644
 struct my_msgbuf {
    long mtype;
-   char mtext[200];
+   char mtext[4];
 };
 
 int main(void) {
@@ -17,30 +17,51 @@ int main(void) {
    int msqid;
    int toend;
    key_t key;
+   system("touch msgq.txt");
 
    if ((key = ftok("msgq.txt", 'B')) == -1) {
       perror("ftok");
       exit(1);
    }
 
-   if ((msqid = msgget(key, PERMS)) == -1) { /* connect to the queue */
+   if ((msqid = msgget(key, PERMS | IPC_CREAT)) == -1) {
       perror("msgget");
       exit(1);
    }
+
+   // if ((msqid = msgget(key, PERMS)) == -1) { /* connect to the queue */
+   //    perror("msgget");
+   //    exit(1);
+   // }
    printf("message queue: ready to receive messages.\n");
 
-   for(;;) { /* normally receiving never ends but just to make conclusion */
-             /* this program ends with string of end */
+   for(;;) { 
+      
       if (msgrcv(msqid, &buf, sizeof(buf.mtext), 0, 0) == -1) {
-         perror("msgrcv");
+         printf("Failed here wtf bruv\n");
+         perror("msgrcv");     
+         system("rm msgq.txt");
          exit(1);
       }
-      printf("recvd: \"%s\"\n", buf.mtext);
-      toend = strcmp(buf.mtext,"end");
-      if (toend == 0)
-      break;
+      // printf("recvd: \"%s\"\n", buf.mtext);
+      int v;
+      for(int i = 0; i < 4; i++) {
+         int bv = (int)buf.mtext[i] & 0xFF;
+         //printf("%02x", bv);
+         printf("%08x -> ", v);
+         v = (v | bv);
+         if(i != 3)
+            v = v << 8;
+      }
+      printf("%08x -> ", v);
+      printf("%d\n", v);
    }
    printf("message queue: done receiving messages.\n");
+
+   if (msgctl(msqid, IPC_RMID, NULL) == -1) {
+      perror("msgctl");
+      exit(1);
+   }
    system("rm msgq.txt");
    return 0;
 }

@@ -7,11 +7,15 @@ pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 double bankAccountBalance = 0;
 
 void deposit(double amount) {
+    pthread_mutex_lock(&lock);
     bankAccountBalance += amount;
+    pthread_mutex_unlock(&lock);
 }
 
 void withdraw(double amount) {
+    pthread_mutex_lock(&lock);
     bankAccountBalance -= amount;
+    pthread_mutex_unlock(&lock);
 }
 
 // utility function to identify even-odd numbers
@@ -39,6 +43,9 @@ int main(int argc, char** argv) {
     pthread_t *children;
     unsigned long id = 0;
     unsigned long nThreads = 0;
+
+    pthread_mutex_init(&lock, 0);
+
     if (argc > 1)
         nThreads = atoi(argv[1]);
     children = malloc( nThreads * sizeof(pthread_t) );
