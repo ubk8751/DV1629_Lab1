@@ -4,7 +4,8 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <fcntl.h> /* For O_* constants */
-
+#include <sys/types.h>
+#include <sys/wait.h>
 const char *semName1 = "my_sema1";
 const char *semName2 = "my_sema2";
 
@@ -17,6 +18,7 @@ int main(int argc, char **argv)
 
 	pid = fork();
 	if (pid) {
+		// Child process
 		for (i = 0; i < 100; i++) {
 			sem_wait(sem_id1);
 			putchar('A'); fflush(stdout);
@@ -28,6 +30,7 @@ int main(int argc, char **argv)
 		sem_unlink(semName1);
 		sem_unlink(semName2);
 	} else {
+		// Parent process
 		for (i = 0; i < 100; i++) {
 			sem_wait(sem_id2);
 			putchar('B'); fflush(stdout);

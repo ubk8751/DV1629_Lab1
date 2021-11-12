@@ -7,17 +7,33 @@
 #define SHM_R 0400
 #define SHM_W 0200
 
+#include <stdlib.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <fcntl.h> /* For O_* constants */
+#include <errno.h>
+
 // /home/saxon/students/20192/sajs19/studentfiles/lab1_code_students_v1.1
 // gcc -O2 -o out shmem.c && chmod +x out && ./out
 
+const char *semName1 = "my_sema1";
+const char *semName2 = "my_sema2";
+
 int main(int argc, char **argv)
 {
+	sem_unlink(semName1);
+	sem_unlink(semName2);
+	sem_t *sem_id1 = sem_open(semName1, O_CREAT, O_RDWR, 10);
+	sem_t *sem_id2 = sem_open(semName2, O_CREAT, O_RDWR, 0);
+
+	int i, status;
 	struct shm_struct {
 		int buffer[10];
 		int buf_write_pos;
 		int buf_read_pos;
 		int has_initialised;
 	};
+
 	volatile struct shm_struct *shmp = NULL;
 	char *addr = NULL;
 	pid_t pid = -1;
@@ -26,22 +42,17 @@ int main(int argc, char **argv)
 
 	/* allocate a chunk of shared memory */
 	shmid = shmget(IPC_PRIVATE, SHMSIZE, IPC_CREAT | SHM_R | SHM_W);
-
 	shmp = (struct shm_struct *) shmat(shmid, addr, 0);
-
 	shmp->buf_write_pos = 0;
 	shmp->buf_read_pos = 0;
-
-	for(int i = 0; i < 10; i++)
-		shmp->buffer[i] = -1;
 
 	pid = fork();
 	if (pid != 0) {
 		/* here's the parent, acting as producer */
 		while (var1 < 100) {
 			/* write to shmem */
+      sem_wait(sem_id1);
 			var1++;
-			while(shmp->buffer[shmp->buf_write_pos] != -1);
 			shmp->buffer[shmp->buf_write_pos] = var1;
 			shmp->buf_write_pos++;
 
@@ -50,24 +61,25 @@ int main(int argc, char **argv)
 
 			printf("Sending %d\n", var1); fflush(stdout);
 
-			// This is REALLY bad because it means the program will sleep for random amount of time
-			// which in turn means that it will basically print stuff at random intervalls.
-			// If the "sender" does this as well, it means that the buffer might not be filled up until the
-			// point where we are reading. This also means that there is a chance the "receiver" sleeps so much that the
-			// sender manages to loop around and you lose a lot of data.
+      sem_post(sem_id2);
 
-			// There is also no specific check to whether or not the sender and receiver are trying to access the data at the same time. Which could cause problems.
 			int slp = (rand() % 100 + 100) * 1000;
 			usleep(slp);
 		}
 		shmdt(addr);
 		shmctl(shmid, IPC_RMID, shm_buf);
+
+		sem_close(sem_id1);
+		sem_close(sem_id2);
+
+		sem_unlink(semName1);
+		sem_unlink(semName2);
 	} else {
 		/* here's the child, acting as consumer */
 		while (var2 < 100) {
 			/* read from shmem */
+      sem_wait(sem_id2);
 
-			while(shmp->buffer[shmp->buf_read_pos] == -1);
 			var2 = shmp->buffer[shmp->buf_read_pos];
 			shmp->buffer[shmp->buf_read_pos] = -1;
 			shmp->buf_read_pos++;
@@ -77,15 +89,14 @@ int main(int argc, char **argv)
 
 			printf("Received %d\n", var2); fflush(stdout);
 
-			// This is REALLY bad because it means the program will sleep for random amount of time
-			// which in turn means that it will basically print stuff at random intervalls.
-			// If the "sender" does this as well, it means that the buffer might not be filled up until the
-			// point where we are reading. This also means that there is a chance the "receiver" sleeps so much that the
-			// sender manages to loop around and you lose a lot of data.
+      sem_post(sem_id1);
 			int slp = (rand() % 100 + 100) * 1000;
 			usleep(slp);
 		}
 		shmdt(addr);
 		shmctl(shmid, IPC_RMID, shm_buf);
+
+		sem_close(sem_id1);
+		sem_close(sem_id2);
 	}
 }
