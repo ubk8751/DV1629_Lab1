@@ -16,7 +16,6 @@ int main(int argc, char **argv)
 		int buffer[10];
 		int buf_write_pos;
 		int buf_read_pos;
-		int has_initialised;
 	};
 	volatile struct shm_struct *shmp = NULL;
 	char *addr = NULL;
