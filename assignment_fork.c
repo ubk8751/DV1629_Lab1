@@ -21,7 +21,6 @@ int main(int argc, char **argv)
         printf("Child 1 id: %i, Child 2 id: %i\n", pids[0], pids[1]);
         for (i = 0; i < niterations; ++i)
             printf("B = %d, ", i);
-
      }
 
      //If pid1 == 0, it's thread 1
