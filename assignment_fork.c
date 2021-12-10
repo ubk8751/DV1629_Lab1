@@ -10,30 +10,34 @@ int main(int argc, char **argv)
     unsigned niterations = 1000;
 
     // fork twice and save the child IDs
-    int pids[2];
-    for(int i = 0; i < 2; i++)
-      pids[i] = fork();
+    pid1 = fork();
 
-    //If both pids are greater than 0, the thread is the parent
-    if (pids[0] > 0 && pids[1] > 0) {
-        //if pid2 == 0, it's thread 2
-        printf("Parent\n");
-        printf("Child 1 id: %i, Child 2 id: %i\n", pids[0], pids[1]);
-        for (i = 0; i < niterations; ++i)
-            printf("B = %d, ", i);
+    //If pid1 > 0 then we're in the parent
+    if (pid1 > 0) {
+        pid2 = fork();
+        
+        // If pid2 > 0 then we're in the parent
+        if(pid2 > 0){
+          printf("Parent: Child processes: %d, %d\n", pid1, pid2);
+          for (i = 0; i < niterations; ++i)
+              printf("B = %d, ", i);
+        } 
+        else if(pid2 == 0) {
+          printf("Child 2\n");
+          for (i = 0; i < niterations; ++i)
+              printf("C = %d, ", i);
+        } else {
+          printf("Unknown process\n");
+        }
      }
 
      //If pid1 == 0, it's thread 1
-     else if(pids[0] == 0 && pids[1] > 0){
+     else if (pid1 == 0){
         printf("Child 1\n");
         for (i = 0; i < niterations; ++i)
             printf("A = %d, ", i);
+     } else {
+       printf("Unknown process\n");
      }
-    else if(pids[0] > 0 && pids[1] == 0){
-        printf("Child 2\n");
-        for (i = 0; i < niterations; ++i)
-          printf("C = %d, ", i);
-    }
-
     printf("\n");
 }
